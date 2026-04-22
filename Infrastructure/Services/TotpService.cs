@@ -14,10 +14,20 @@ public class TotpService : ITotpService
 
     public bool ValidateCode(string secretKey, string code)
     {
-        var secretBytes = Base32Encoding.ToBytes(secretKey);
-        var totp = new Totp(secretBytes);
-        
-        // Verifies the code with a small time window tolerance to account for slight clock delays
-        return totp.VerifyTotp(code, out long timeWindowUsed, window: new VerificationWindow(previous: 1, future: 1));
+        try 
+        {
+            if (string.IsNullOrWhiteSpace(code)) return false;
+            
+            var secretBytes = Base32Encoding.ToBytes(secretKey);
+            var totp = new Totp(secretBytes);
+            
+            // Verifies the code with a small time window tolerance to account for slight clock delays
+            return totp.VerifyTotp(code, out long timeWindowUsed, window: new VerificationWindow(previous: 1, future: 1));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TotpService] Error validating code: {ex.Message}");
+            return false;
+        }
     }
 }

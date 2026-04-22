@@ -2,9 +2,12 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Infrastructure;
 using Application;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 // 1. Load the .env file variables into the application
-Env.Load();
+Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,7 +42,7 @@ builder.Services.AddAuthorization();
 
 // 3. Register Application and Infrastructure Services
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(connectionString);
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {

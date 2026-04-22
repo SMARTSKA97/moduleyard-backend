@@ -1,8 +1,8 @@
 using Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Infrastructure.Persistence.Models; // Brings in the DbContext
-using DomainUser = Domain.Entities.User; // 1. Nickname for the pure business model
-using DbUser = Infrastructure.Persistence.Models.User; // 2. Nickname for the database model
+using Infrastructure.Persistence.Models;
+using Domain.Entities;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories;
 
@@ -15,17 +15,16 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task SaveTotpSecretAsync(string email, string secretKey)
+    public async Task SaveTotpSecretAsync(string email, string secretKey, string? passwordHash = null)
     {
-        // Use the DbUser nickname when talking to EF Core
-        DbUser? user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
         if (user == null)
         {
-            user = new DbUser 
+            user = new User 
             { 
                 Email = email, 
-                PasswordHash = "PENDING_SETUP",
+                PasswordHash = passwordHash ?? "PENDING_SETUP",
                 TotpSecret = secretKey,
                 IsVerified = false
             };
@@ -34,23 +33,26 @@ public class UserRepository : IUserRepository
         else
         {
             user.TotpSecret = secretKey;
+            if (passwordHash != null) user.PasswordHash = passwordHash;
         }
 
         await _context.SaveChangesAsync();
     }
 
-    // Explicitly return the DomainUser nickname to satisfy the Interface
-    public async Task<DomainUser?> GetUserByEmailAsync(string email)
+    public async Task<User?> GetUserByEmailAsync(string email)
     {
-        DbUser? dbUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-        
-        if (dbUser == null) return null;
+        return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+    }
 
-        // Map the database model to the pure domain model
-        return new DomainUser
-        {
-            Email = dbUser.Email,
-            TotpSecret = dbUser.TotpSecret
-        };
+    public async Task CreateUserAsync(User user)
+    {
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
     }
 }
